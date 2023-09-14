@@ -1,0 +1,21 @@
+version: "3"
+
+services:
+  app:
+    container_name: public-speaking-in-kazakh
+    restart: always
+    build: ./app
+    volumes:
+      - ./audio:/home/python/src/app/audio:ro
+    environment:
+      - AUDIO_PATH=/home/python/src/app/audio
+    command: hypercorn -w 4 -b 0.0.0.0:80 main:app
+
+  nginx:
+    container_name: nginx
+    restart: always
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - app
