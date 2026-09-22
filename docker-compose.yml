@@ -1,0 +1,122 @@
+name: duryssoile
+
+x-db-env: &db-env
+  POSTGRES_HOST: db
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: ${POSTGRES_DB:-duryssoile}
+  POSTGRES_USER: ${POSTGRES_USER:-duryssoile}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+
+x-rustfs-env: &rustfs-env
+  RUSTFS_ENDPOINT: http://rustfs:9000
+  RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:?set RUSTFS_ACCESS_KEY in .env}
+  RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:?set RUSTFS_SECRET_KEY in .env}
+  RUSTFS_BUCKET: ${RUSTFS_BUCKET:-audio}
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-duryssoile}
+      POSTGRES_USER: ${POSTGRES_USER:-duryssoile}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-duryssoile} -d ${POSTGRES_DB:-duryssoile}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # S3-compatible object storage for the pronunciation clips. Replaces the
+  # read-only host bind mount the 2023 version used, and the MinIO block that
+  # sat commented out in refactor_v1/docker-compose-future.yml.
+  rustfs:
+    image: rustfs/rustfs:latest
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:?set RUSTFS_ACCESS_KEY in .env}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:?set RUSTFS_SECRET_KEY in .env}
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_VOLUMES: /data
+      RUSTFS_OBS_LOGGER_LEVEL: error
+    command: ["/data"]
+    volumes:
+      - rustfs_data:/data
+    ports:
+      # Console only, for eyeballing the bucket. The S3 API (9000) stays
+      # internal to the compose network.
+      - "${RUSTFS_CONSOLE_PORT:-9001}:9001"
+    healthcheck:
+      # RustFS answers 403 on / for unauthenticated callers, so probe its
+      # dedicated /health endpoint instead -- curl -f would reject the 403.
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/health -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      <<: [*db-env, *rustfs-env]
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+      # The backend does not start until init has converged the database and
+      # the audio bucket, so it never serves an empty or half-seeded dataset.
+      # A non-zero exit from init blocks startup on purpose.
+      init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  nginx:
+    image: nginx:mainline-alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx/:/etc/nginx/conf.d/:ro
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_started
+
+  # Convergence step, run on every `up` before the backend starts. In the
+  # default sync mode it exits immediately when the database and the bucket
+  # already match data/*.json and ./audio; set INIT_MODE=hard (or pass
+  # --hard) to drop everything and rebuild.
+  init:
+    build: ./init
+    restart: "no"
+    environment:
+      <<: [*db-env, *rustfs-env]
+      INIT_MODE: ${INIT_MODE:-sync}
+      UPLOAD_CONCURRENCY: ${UPLOAD_CONCURRENCY:-16}
+    volumes:
+      - ./db/:/srv/db/:ro
+      - ./data/:/srv/data/:ro
+      # The pronunciation clips, laid out as ./audio/<type>/<filename>.
+      # Read-only: init uploads them into RustFS and never writes here.
+      - ${AUDIO_DIR:-./audio}/:/srv/audio/:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  rustfs_data:

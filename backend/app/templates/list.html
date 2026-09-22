@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ TYPE_LABELS[word_type] }} — «Дұрыс сөйле»{% endblock %}
+{% block content %}
+<form class="toolbar" method="get"
+      action="{{ url_for('admin_list', word_type=word_type.value).path }}">
+  <div style="flex:2 1 260px">
+    <label for="q">Іздеу</label>
+    <input id="q" name="q" type="search" value="{{ q }}"
+           placeholder="Сөздің бір бөлігін жазыңыз…">
+  </div>
+  <div style="flex:0 0 auto">
+    <button type="submit">Іздеу</button>
+  </div>
+  {% if q %}
+  <div style="flex:0 0 auto">
+    <a class="btn btn-secondary"
+       href="{{ url_for('admin_list', word_type=word_type.value).path }}">Тазалау</a>
+  </div>
+  {% endif %}
+  <div style="flex:0 0 auto; margin-left:auto">
+    <a class="btn"
+       href="{{ url_for('admin_new_word', word_type=word_type.value).path }}">
+      + Жаңа сөз
+    </a>
+  </div>
+</form>
+
+<div class="panel">
+  <h2 style="margin:0 0 4px; font-size:16px">{{ TYPE_LABELS[word_type] }}</h2>
+  <p class="muted" style="margin:0 0 16px">
+    {% if q %}«{{ q }}» бойынша {{ total }} сөз табылды{% else %}Барлығы {{ total }} сөз{% endif %}
+    {%- if pages > 1 %} · {{ page }} / {{ pages }} бет{% endif %}
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:90px">Нөмірі</th>
+        <th>Сөз</th>
+        <th style="width:240px">Айтылуы</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for word in words %}
+      <tr>
+        <td class="muted">{{ word.id }}</td>
+        <td>
+          <a href="{{ url_for('admin_edit_word', word_id=word.id).path }}">{{ word.word }}</a>
+          {% if word.correct_versions %}
+            <span class="badge">{{ word.correct_versions | length }} дұрыс нұсқа</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if word.audio_key %}
+            <audio controls preload="none" src="/api/v1.0/audio/{{ word.id }}"></audio>
+          {% else %}
+            <span class="muted">дыбыс жоқ</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="muted">Сөз табылмады.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if pages > 1 %}
+  <div class="pager">
+    {% if page > 1 %}
+      <a class="btn btn-secondary" href="?q={{ q | urlencode }}&amp;page={{ page - 1 }}">← Алдыңғы</a>
+    {% endif %}
+    <span class="muted">{{ page }} / {{ pages }}</span>
+    {% if page < pages %}
+      <a class="btn btn-secondary" href="?q={{ q | urlencode }}&amp;page={{ page + 1 }}">Келесі →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

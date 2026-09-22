@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}
+  {% if word %}{{ word.word }} — өңдеу{% else %}Жаңа сөз{% endif %} — «Дұрыс сөйле»
+{% endblock %}
+{% block content %}
+<p>
+  <a href="{{ url_for('admin_list', word_type=word_type.value).path }}">
+    ← {{ TYPE_LABELS[word_type] }} тізіміне қайту
+  </a>
+</p>
+
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+<form class="panel" method="post" enctype="multipart/form-data"
+      action="{% if word %}{{ url_for('admin_update_word', word_id=word.id).path }}{% else %}{{ url_for('admin_create_word').path }}{% endif %}">
+  <h2 style="margin-top:0">
+    {% if word %}
+      Сөзді өңдеу <span class="muted">№{{ word.id }}</span>
+    {% else %}
+      Жаңа сөз қосу
+    {% endif %}
+  </h2>
+
+  <div class="row">
+    <div class="field">
+      <label for="word">Сөз</label>
+      <input id="word" name="word" type="text" required
+             value="{{ word.word if word else '' }}">
+    </div>
+    <div class="field">
+      <label for="type">Түрі</label>
+      <select id="type" name="type">
+        {% for type in WORD_TYPES %}
+          <option value="{{ type.value }}"
+                  data-correct-versions="{{ 'yes' if supports_correct_versions(type) else 'no' }}"
+                  {% if word_type == type %}selected{% endif %}>
+            {{ TYPE_LABELS[type] }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Айтылу дыбысы</label>
+    {% if word and word.audio_key %}
+      <p style="margin:0 0 8px">
+        <audio controls preload="none" src="/api/v1.0/audio/{{ word.id }}"></audio>
+      </p>
+      <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input type="checkbox" name="delete_audio" value="1" style="width:auto">
+        <span>Қазіргі дыбысты жою</span>
+      </label>
+    {% else %}
+      <p class="muted" style="margin:0 0 8px">Дыбыс жүктелмеген.</p>
+    {% endif %}
+    <input type="file" name="audio" accept="audio/*">
+    <p class="muted" style="font-size:13px;margin:6px 0 0">
+      Ауыстыру үшін жаңа файл жүктеңіз. mp3 / wav / ogg / opus / m4a / aac,
+      ең көбі 10 МБ.
+    </p>
+  </div>
+
+  {# Correct versions belong to parasite words only, so this block is hidden
+     for the other type -- and the router refuses them there as well. #}
+  <div id="cv-section"
+       {% if not supports_correct_versions(word_type) %}hidden{% endif %}>
+    <h3>Дұрыс нұсқалары</h3>
+    <p class="muted" style="font-size:13px;margin-top:0">
+      «Дұрыс сөз» жолын бос қалдырсаңыз, сол нұсқа сақталмайды.
+    </p>
+
+    <div id="cv-list">
+      {% for version in (word.correct_versions if word else []) %}
+      <div class="cv">
+        <div class="field">
+          <label>Дұрыс сөз</label>
+          <input name="cv_word" type="text" value="{{ version.word }}">
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Қате қолданылу мысалы</label>
+            <textarea name="cv_incorrect_usage" rows="2">{{ version.incorrect_usage or '' }}</textarea>
+          </div>
+          <div class="field">
+            <label>Дұрыс қолданылу мысалы</label>
+            <textarea name="cv_correct_usage" rows="2">{{ version.correct_usage or '' }}</textarea>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <template id="cv-template">
+      <div class="cv">
+        <div class="field">
+          <label>Дұрыс сөз</label>
+          <input name="cv_word" type="text">
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Қате қолданылу мысалы</label>
+            <textarea name="cv_incorrect_usage" rows="2"></textarea>
+          </div>
+          <div class="field">
+            <label>Дұрыс қолданылу мысалы</label>
+            <textarea name="cv_correct_usage" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <p>
+      <button type="button" class="btn btn-secondary" id="add-cv">
+        + Дұрыс нұсқа қосу
+      </button>
+    </p>
+  </div>
+
+  <hr style="border:0;border-top:1px solid var(--border);margin:20px 0">
+  <button type="submit">Сақтау</button>
+</form>
+
+{% if word %}
+<form method="post" action="{{ url_for('admin_delete_word', word_id=word.id).path }}"
+      style="margin-top:16px"
+      onsubmit="return confirm('«{{ word.word }}» сөзі мен оның дыбысы жойылады. Бұл әрекетті қайтару мүмкін емес.')">
+  <button type="submit" class="btn btn-danger">Бұл сөзді жою</button>
+</form>
+{% endif %}
+
+<script>
+  document.getElementById('add-cv').addEventListener('click', function () {
+    var template = document.getElementById('cv-template');
+    document.getElementById('cv-list').appendChild(template.content.cloneNode(true));
+  });
+
+  // Show the correct-versions editor only for types that carry them.
+  var typeSelect = document.getElementById('type');
+  typeSelect.addEventListener('change', function () {
+    var option = typeSelect.options[typeSelect.selectedIndex];
+    document.getElementById('cv-section').hidden =
+      option.dataset.correctVersions !== 'yes';
+  });
+</script>
+{% endblock %}

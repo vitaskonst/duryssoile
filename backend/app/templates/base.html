@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}«Дұрыс сөйле» — басқару панелі{% endblock %}</title>
+<style>
+  :root {
+    /* Light theme only -- there is deliberately no dark variant. */
+    color-scheme: light;
+    --bg: #f6f7f9; --panel: #ffffff; --text: #16191d; --muted: #5c6470;
+    --border: #dfe3e8; --accent: #2d6cdf; --accent-text: #ffffff;
+    --danger: #c02a2a; --ok: #1d7a44; --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 12px 16px 0;
+  }
+  .header-top {
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .header-top h1 { font-size: 17px; margin: 0; font-weight: 650; }
+  .header-links { margin-left: auto; display: flex; gap: 14px; font-size: 14px; }
+  /* Per-type tabs: one page per word type, so the tab is the page.
+     Underline rather than folder tabs: the header is --panel and the content
+     below it is --bg, so a folder tab's "active blends into the panel" trick
+     would read inverted here -- the selected tab would disappear into the
+     white header while the unselected ones stood out as filled chips. */
+  .tabs {
+    display: flex; gap: 22px; flex-wrap: wrap;
+    margin-bottom: -1px;  /* active underline lands on the header rule */
+  }
+  .tabs a {
+    padding: 6px 1px 10px; color: var(--muted);
+    font-size: 14px; font-weight: 550; text-decoration: none;
+    border-bottom: 2px solid transparent;
+  }
+  .tabs a:hover {
+    color: var(--text); text-decoration: none;
+    border-bottom-color: var(--border);
+  }
+  .tabs a[aria-current="page"] {
+    color: var(--accent); border-bottom-color: var(--accent); font-weight: 650;
+  }
+  main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 64px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th, td {
+    text-align: left; padding: 9px 10px;
+    border-bottom: 1px solid var(--border); vertical-align: middle;
+  }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  input[type=text], input[type=password], input[type=search], select, textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--bg); color: var(--text);
+    font: inherit;
+  }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+  .field { margin-bottom: 16px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > * { flex: 1 1 200px; }
+  button, .btn {
+    display: inline-block; padding: 8px 14px; border: 1px solid transparent;
+    border-radius: 6px; background: var(--accent); color: var(--accent-text);
+    font: inherit; font-weight: 550; cursor: pointer;
+  }
+  .btn-secondary { background: transparent; color: var(--text); border-color: var(--border); }
+  .btn-danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+  .muted { color: var(--muted); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 99px;
+    border: 1px solid var(--border); font-size: 12px; color: var(--muted);
+    white-space: nowrap;
+  }
+  .error {
+    padding: 10px 12px; border-radius: 6px; margin-bottom: 16px;
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    border: 1px solid var(--danger); color: var(--danger);
+  }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 18px; }
+  .pager { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 18px; }
+  audio { height: 32px; vertical-align: middle; max-width: 220px; }
+  .cv { border: 1px solid var(--border); border-radius: 6px; padding: 14px; margin-bottom: 12px; }
+  @media (max-width: 620px) {
+    .hide-sm { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-top">
+    <h1>«Дұрыс сөйле» <span class="muted">— басқару панелі</span></h1>
+    {% if request.session.get('admin') %}
+      <div class="header-links">
+        <a href="/api/v1.0/docs">API құжаттамасы</a>
+        <a href="{{ url_for('admin_logout').path }}">Шығу</a>
+      </div>
+    {% endif %}
+  </div>
+  {% if request.session.get('admin') %}
+    <nav class="tabs">
+      {% for type in WORD_TYPES %}
+        <a href="{{ url_for('admin_list', word_type=type.value).path }}"
+           {% if word_type is defined and word_type == type %}aria-current="page"{% endif %}>
+          {{ TYPE_LABELS[type] }}
+        </a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

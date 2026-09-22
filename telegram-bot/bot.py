@@ -5,7 +5,10 @@ from decouple import config
 
 bot = telebot.TeleBot(config('token'))
 
-SERVICE_URL = 'http://duryssoile.nu.edu.kz/api/v1.0'
+# Was hardcoded to http://duryssoile.nu.edu.kz/api/v1.0, which is the only
+# change this file needed for refactor_v2: the API paths and response
+# shapes are unchanged, so the rest of the bot works as-is.
+SERVICE_URL = config('service_url', default='http://nginx/api/v1.0')
 
 type_to_description = {
     'parasite': 'Бөгде сөздер',

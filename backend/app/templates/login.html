@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Кіру — «Дұрыс сөйле»{% endblock %}
+{% block content %}
+<div class="panel" style="max-width: 380px; margin: 40px auto;">
+  <h2 style="margin-top:0">Кіру</h2>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <form method="post" action="{{ url_for('admin_login').path }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="field">
+      <label for="password">Құпиясөз</label>
+      <input id="password" name="password" type="password" required autofocus
+             autocomplete="current-password">
+    </div>
+    <button type="submit" style="width:100%">Кіру</button>
+  </form>
+</div>
+{% endblock %}
