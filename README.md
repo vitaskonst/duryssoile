@@ -239,10 +239,12 @@ is not reachable from outside the compose network.
 
 `GET /audio/{id}?format=opus` returns the clip re-encoded as a mono
 OGG/Opus voice note (`audio/ogg`) — the format Telegram needs for voice
-messages with a waveform, and for inline voice results. It is converted with
-ffmpeg on first request and kept in RustFS as `opus/{id}.ogg`; changing or
-deleting a word's clip in the admin page deletes that copy, so it is never
-stale. Without `format`, the response is the clip as uploaded, unchanged.
+messages with a waveform, and for inline voice results. It is kept in RustFS
+as `opus/{id}.ogg`: created by the admin page when a clip is uploaded, or on
+first request for seeded clips, and deleted along with the clip. The
+conversion uses mpg123 and opusenc, which is why clips must be MP3, WAV or
+Opus in OGG. Without `format`, the response is the clip as uploaded,
+unchanged.
 
 ## Admin page
 
@@ -295,7 +297,7 @@ server-side rule.
 ### The rest
 
 Create and edit words, manage correct versions, and upload or delete a clip
-(mp3/wav/ogg/opus/m4a/aac, 10 MB max) which goes straight into RustFS.
+(mp3, wav or Opus in ogg; 10 MB max) which goes straight into RustFS.
 Deleting a word cascades to its correct versions and removes its object.
 
 The password is compared with `secrets.compare_digest`, and five failed

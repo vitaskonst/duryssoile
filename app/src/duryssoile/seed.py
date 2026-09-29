@@ -44,8 +44,6 @@ CONTENT_TYPES = {
     '.wav': 'audio/wav',
     '.ogg': 'audio/ogg',
     '.opus': 'audio/opus',
-    '.m4a': 'audio/mp4',
-    '.aac': 'audio/aac',
 }
 
 

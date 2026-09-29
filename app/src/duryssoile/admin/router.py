@@ -18,7 +18,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import storage
+from .. import storage, voice
 from ..config import Settings, get_settings
 from ..db import get_session
 from ..models import CorrectVersion, Word, WordType
@@ -34,6 +34,8 @@ templates.env.globals['supports_correct_versions'] = labels.supports_correct_ver
 router = APIRouter()
 
 PAGE_SIZE = 25
+# Formats voice.py can turn into the OGG/Opus version the API also serves;
+# an .ogg/.opus upload must actually be Opus (not Vorbis).
 ALLOWED_AUDIO_TYPES = {
     'audio/mpeg': '.mp3',
     'audio/mp3': '.mp3',
@@ -41,8 +43,6 @@ ALLOWED_AUDIO_TYPES = {
     'audio/x-wav': '.wav',
     'audio/ogg': '.ogg',
     'audio/opus': '.opus',
-    'audio/mp4': '.m4a',
-    'audio/aac': '.aac',
 }
 MAX_AUDIO_BYTES = 10 * 1024 * 1024
 
@@ -203,8 +203,19 @@ async def store_audio(word: Word, upload: UploadFile) -> None:
     if not body:
         raise HTTPException(status_code=400, detail='Дыбыс файлы бос')
 
+    # Converting now both validates the clip and stores its OGG/Opus version,
+    # so every stored clip is guaranteed to have one.
+    try:
+        opus = await voice.to_opus(body)
+    except voice.UnsupportedClip:
+        raise HTTPException(
+            status_code=400,
+            detail='Файлды оқу мүмкін болмады. mp3, wav немесе Opus кодегімен ogg жүктеңіз.',
+        ) from None
+
     key = storage.audio_key(word.type.value, word.id, suffix)
     await storage.put_object(key, io.BytesIO(body), content_type)
+    await storage.put_object(storage.opus_key(word.id), io.BytesIO(opus), 'audio/ogg')
 
     # Drop the previous object if the key changed (e.g. mp3 -> wav).
     if word.audio_key and word.audio_key != key:
@@ -212,7 +223,6 @@ async def store_audio(word: Word, upload: UploadFile) -> None:
             await storage.delete_object(word.audio_key)
         except Exception:  # noqa: BLE001 - a stale object is not fatal
             pass
-    await storage.forget_opus(word.id)
 
     word.audio_key = key
 

@@ -31,6 +31,10 @@ async def opus_version(word: Word) -> bytes:
     source, _, _ = await storage.get_object(word.audio_key)
     try:
         body = await voice.to_opus(source)
+    except voice.UnsupportedClip:
+        # Only clips uploaded before uploads were restricted to convertible
+        # formats can get here.
+        raise HTTPException(status_code=415, detail='No voice version of this clip') from None
     except voice.ConversionFailed:
         logger.exception('could not convert the clip of word %s', word.id)
         raise HTTPException(status_code=500, detail='Could not convert the clip') from None
