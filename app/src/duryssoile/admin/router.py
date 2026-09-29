@@ -15,7 +15,7 @@ from fastapi import (
 )
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import storage, voice
@@ -415,13 +415,19 @@ async def list_words(
         select(func.count()).select_from(Word).where(Word.type == resolved)
     )
 
+    order = [Word.id]
     if q:
-        # Admin search is a substring match; the public API uses a prefix.
-        pattern = f'%{escape_like(q.lower())}%'
+        # Admin search is a substring match (the public API uses a prefix),
+        # but words that start with the query are listed first, as in the
+        # API, before those that only contain it.
+        escaped = escape_like(q.lower())
+        pattern = f'%{escaped}%'
         statement = statement.where(Word.word.ilike(pattern, escape='\\'))
         count_statement = count_statement.where(
             Word.word.ilike(pattern, escape='\\')
         )
+        starts_with = Word.word.ilike(f'{escaped}%', escape='\\')
+        order = [case((starts_with, 0), else_=1), Word.id]
 
     total = (await session.scalar(count_statement)) or 0
     pages = max(math.ceil(total / PAGE_SIZE), 1)
@@ -429,7 +435,7 @@ async def list_words(
 
     words = (
         await session.scalars(
-            statement.order_by(Word.id).offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE)
+            statement.order_by(*order).offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE)
         )
     ).all()
 
