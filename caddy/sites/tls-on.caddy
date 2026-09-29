@@ -1,10 +1,17 @@
 {$DOMAIN} {
+	# Validate over port 443 (TLS-ALPN) only. The perimeter firewall answers
+	# Let's Encrypt's HTTP-01 validation requests on port 80 with a 503
+	# block page, so that challenge can never succeed from this host.
+	tls {
+		issuer acme {
+			disable_http_challenge
+		}
+	}
 	import backend
 }
 
 # 301, not 308: the published v1 Android app streams audio with MediaPlayer,
 # which follows a 301 from http to https but not a 308 (tested on Android 15).
-# ACME HTTP challenges on this port are answered by Caddy before this route.
 http://{$DOMAIN} {
 	redir https://{host}{uri} permanent
 }

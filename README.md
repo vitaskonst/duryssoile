@@ -71,10 +71,15 @@ two modes:
 - `TLS=off` (the default): plain HTTP on port 80. For local development.
 - `TLS=on`: HTTPS for `DOMAIN`. Caddy obtains a Let's Encrypt certificate on
   first start and renews it on its own, and every plain-HTTP request is
-  redirected to HTTPS. `DOMAIN` must resolve to the host, and ports 80 and
-  443 (`HTTP_PORT=80`, `HTTPS_PORT=443`) must be reachable from the internet
-  for Let's Encrypt to validate it. It also marks the admin session cookie
-  `Secure`.
+  redirected to HTTPS. `DOMAIN` must resolve to the host, and port 443
+  (`HTTPS_PORT=443`) must be reachable from the internet: Let's Encrypt
+  validates over it (the TLS-ALPN challenge). Port 80 (`HTTP_PORT=80`) is
+  only for the redirect. It also marks the admin session cookie `Secure`.
+
+  The HTTP challenge is disabled in `caddy/sites/tls-on.caddy` because the
+  university's perimeter firewall blocks it: a request with Let's Encrypt's
+  validation User-Agent to a `/.well-known/acme-challenge/` path gets a 503
+  "Application Blocked" page and never reaches Caddy.
 
 ```bash
 # production .env
