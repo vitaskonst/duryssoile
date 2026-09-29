@@ -14,15 +14,18 @@
 }
 
 (backend) {
-	# The admin page is for the internal network only. The perimeter NATs
-	# only the destination, so a client's own address tells internal
-	# (10.x) from external (public) callers. Outsiders get a 404, so the
-	# page does not reveal that it exists.
-	@admin_from_outside {
+	# The admin page and the API docs are for the internal network only.
+	# The perimeter NATs only the destination, so a client's own address
+	# tells internal (10.x) from external (public) callers. Outsiders get a
+	# 404, so the pages do not reveal that they exist. The docs include the
+	# main app's /openapi.json, which lists every admin endpoint.
+	@internal_only_from_outside {
 		path /admin /admin/*
+		path /docs /docs/* /redoc /openapi.json
+		path /api/v1.0/docs /api/v1.0/docs/* /api/v1.0/redoc /api/v1.0/openapi.json
 		not remote_ip private_ranges
 	}
-	respond @admin_from_outside 404
+	respond @internal_only_from_outside 404
 
 	# Admin audio uploads are capped at 10 MB by the app.
 	request_body {
