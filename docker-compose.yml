@@ -59,9 +59,10 @@ services:
     volumes:
       - rustfs_data:/data
     ports:
-      # Console only, for eyeballing the bucket. The S3 API (9000) stays
-      # internal to the compose network.
-      - "${RUSTFS_CONSOLE_PORT:-9001}:9001"
+      # Console only, for eyeballing the bucket, and on the host's loopback
+      # only unless RUSTFS_CONSOLE_PORT says otherwise. The S3 API (9000)
+      # stays internal to the compose network.
+      - "${RUSTFS_CONSOLE_PORT:-127.0.0.1:9001}:9001"
     healthcheck:
       # RustFS answers 403 on / for unauthenticated callers, so probe its
       # dedicated /health endpoint instead -- curl -f would reject the 403.

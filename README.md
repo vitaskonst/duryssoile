@@ -68,8 +68,10 @@ Then:
 - RustFS console — <http://localhost:9001>
 
 Nothing but Caddy (`HTTP_PORT`/`HTTPS_PORT`, default 8080/8443) and the
-RustFS console (`RUSTFS_CONSOLE_PORT`) is published. Postgres, the S3 API and
-the backend itself stay on the internal compose network.
+RustFS console (`RUSTFS_CONSOLE_PORT`, `127.0.0.1:9001` — the host's
+loopback only; use an SSH tunnel to reach it on a server) is published.
+Postgres, the S3 API and the backend itself stay on the internal compose
+network.
 
 ## HTTPS
 
