@@ -26,6 +26,9 @@ class Settings(BaseSettings):
 
     admin_password: str
     secret_key: str
+    # Mark the admin session cookie Secure (sent over HTTPS only). Compose
+    # sets it from TLS, which accepts on/off as well as true/false.
+    session_https_only: bool = False
 
     # Page size cap for the public API, mirrors the original behaviour.
     max_page_size: int = 100

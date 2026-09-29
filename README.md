@@ -31,7 +31,7 @@ app/            the FastAPI app: public API (/api/v1.0) + admin page (/admin)
   seed.py       the one-time import: seed/ -> Postgres + RustFS
 migrations/     Alembic migrations -- the schema lives here
 seed/           the original data: two JSON files + audio/ (clips, git-ignored)
-nginx/          reverse proxy
+caddy/          reverse proxy, and HTTPS with automatic certificates
 Dockerfile      one image, used by both the backend and setup services
 ```
 
@@ -48,7 +48,7 @@ docker compose up -d --build
 ```
 
 `up` starts Postgres and RustFS, runs `setup` (migrations, then the seed
-import on a fresh database), and only then starts the backend and nginx. The
+import on a fresh database), and only then starts the backend and Caddy. The
 first run imports ~22 k words and uploads their audio, so give it a couple of
 minutes; later runs find the database populated and take a second or two.
 
@@ -59,9 +59,42 @@ Then:
 - Admin — <http://localhost:8080/admin/> (log in with `ADMIN_PASSWORD`)
 - RustFS console — <http://localhost:9001>
 
-Nothing but nginx (`HTTP_PORT`, default 8080) and the RustFS console
-(`RUSTFS_CONSOLE_PORT`) is published. Postgres and the S3 API stay on the
-internal compose network.
+Nothing but Caddy (`HTTP_PORT`/`HTTPS_PORT`, default 8080/8443) and the
+RustFS console (`RUSTFS_CONSOLE_PORT`) is published. Postgres, the S3 API and
+the backend itself stay on the internal compose network.
+
+## HTTPS
+
+Caddy (`caddy/`) is the reverse proxy. `TLS` in `.env` switches it between
+two modes:
+
+- `TLS=off` (the default): plain HTTP on port 80. For local development.
+- `TLS=on`: HTTPS for `DOMAIN`. Caddy obtains a Let's Encrypt certificate on
+  first start and renews it on its own, and every plain-HTTP request is
+  redirected to HTTPS. `DOMAIN` must resolve to the host, and ports 80 and
+  443 (`HTTP_PORT=80`, `HTTPS_PORT=443`) must be reachable from the internet
+  for Let's Encrypt to validate it. It also marks the admin session cookie
+  `Secure`.
+
+```bash
+# production .env
+TLS=on
+DOMAIN=duryssoile.nu.edu.kz
+HTTP_PORT=80
+HTTPS_PORT=443
+```
+
+**The redirect is a 301, deliberately.** Caddy's built-in HTTP-to-HTTPS
+redirect is a 308, and the published v1 Android app plays audio by handing
+the `http://…/audio/{id}` URL to Android's MediaPlayer, which follows a 301
+from http to https but treats a 308 as an error — the word list loads and
+the audio silently never plays. Tested on Android 15 against both the v1
+and v2 apps; the v2 app and the Telegram bot follow either code. So
+`caddy/Caddyfile` turns the automatic redirect off and
+`caddy/sites/tls-on.caddy` sends a 301 itself. Do not "simplify" it back.
+
+The certificates live in the `caddy_data` volume. Keep it: recreating it
+means requesting new certificates, and Let's Encrypt rate-limits those.
 
 ## Schema and migrations
 
@@ -242,11 +275,11 @@ Create and edit words, manage correct versions, and upload or delete a clip
 Deleting a word cascades to its correct versions and removes its object.
 
 The password is compared with `secrets.compare_digest`, and five failed
-attempts from one address trigger a 60-second lockout. That throttle is
-per-process, so it is a speed bump rather than a real rate limiter — put the
-admin page behind TLS and a network restriction before exposing it publicly,
-and set `https_only=True` on the session middleware in `app/main.py` once
-TLS terminates in front of nginx.
+attempts from one address trigger a 60-second lockout. The address is the
+real client's, taken from the `X-Forwarded-For` header Caddy sets (uvicorn
+runs with `--forwarded-allow-ips`). The throttle is per-process, so it is a
+speed bump rather than a real rate limiter; consider restricting the admin
+page to the internal network too.
 
 ## Notes
 

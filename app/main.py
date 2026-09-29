@@ -44,7 +44,7 @@ app.add_middleware(
     session_cookie='duryssoile_admin',
     max_age=14 * 24 * 3600,
     same_site='lax',
-    https_only=False,  # set True once TLS terminates in front of nginx
+    https_only=settings.session_https_only,
 )
 
 app.add_exception_handler(

@@ -75,7 +75,10 @@ services:
     build: .
     image: duryssoile-backend
     restart: unless-stopped
-    environment: *app-env
+    environment:
+      <<: *app-env
+      # With TLS on, the admin session cookie is marked Secure.
+      SESSION_HTTPS_ONLY: ${TLS:-off}
     depends_on:
       db:
         condition: service_healthy
@@ -93,13 +96,23 @@ services:
       retries: 6
       start_period: 10s
 
-  nginx:
-    image: nginx:1.31.6-alpine3.24@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
+  # Reverse proxy; see caddy/Caddyfile. With TLS=on it serves DOMAIN over
+  # HTTPS and obtains and renews the certificate itself.
+  caddy:
+    image: caddy:2.11.4-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b
     restart: unless-stopped
+    environment:
+      TLS: ${TLS:-off}
+      DOMAIN: ${DOMAIN:-}
     volumes:
-      - ./nginx/:/etc/nginx/conf.d/:ro
+      - ./caddy/:/etc/caddy/:ro
+      # The certificates and the ACME account. Keep this volume: recreating
+      # it means requesting new certificates, which Let's Encrypt rate-limits.
+      - caddy_data:/data
+      - caddy_config:/config
     ports:
       - "${HTTP_PORT:-8080}:80"
+      - "${HTTPS_PORT:-8443}:443"
     depends_on:
       backend:
         condition: service_started
@@ -131,3 +144,5 @@ services:
 volumes:
   db_data:
   rustfs_data:
+  caddy_data:
+  caddy_config:

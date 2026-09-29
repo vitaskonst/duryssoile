@@ -24,4 +24,9 @@ USER duryssoile
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+# --forwarded-allow-ips: take the client address (and scheme) from the
+# proxy's X-Forwarded-* headers. Only the proxy can reach this port, and it
+# overwrites any X-Forwarded-For the client sent, so the headers are trusted;
+# without this every visitor shares the proxy's address and the admin login
+# throttle locks everyone out together.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--proxy-headers", "--forwarded-allow-ips", "*"]

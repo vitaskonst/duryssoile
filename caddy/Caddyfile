@@ -1,0 +1,26 @@
+# Reverse proxy in front of the backend. TLS (set in .env) picks the sites:
+#   off -- plain HTTP on :80 (local development, the default)
+#   on  -- HTTPS for DOMAIN, with a Let's Encrypt certificate that Caddy
+#          obtains and renews on its own; plain HTTP redirects to it
+{
+	# Caddy's automatic HTTP->HTTPS redirect is a 308, which Android's
+	# MediaPlayer does not follow. sites/tls-on.caddy redirects with a 301.
+	auto_https disable_redirects
+
+	# No HTTP/3: only TCP 80 and 443 are open to the production host.
+	servers {
+		protocols h1 h2
+	}
+}
+
+(backend) {
+	# Admin audio uploads are capped at 10 MB by the app.
+	request_body {
+		max_size 12MB
+	}
+	# Sets X-Forwarded-For from the real client address (ignoring any the
+	# client sent) and passes the original Host header through.
+	reverse_proxy backend:8000
+}
+
+import sites/tls-{$TLS:off}.caddy
