@@ -1,4 +1,6 @@
-FROM python:3.12-slim
+# Pinned by tag and digest like the images in docker-compose.yml, so every
+# rebuild starts from the same Python and Debian patch level.
+FROM python:3.12.14-slim-trixie@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
