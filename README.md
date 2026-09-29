@@ -237,6 +237,13 @@ Audio is proxied through the backend rather than served as a presigned
 redirect, because a presigned URL would point at the RustFS endpoint, which
 is not reachable from outside the compose network.
 
+`GET /audio/{id}?format=opus` returns the clip re-encoded as a mono
+OGG/Opus voice note (`audio/ogg`) — the format Telegram needs for voice
+messages with a waveform, and for inline voice results. It is converted with
+ffmpeg on first request and kept in RustFS as `opus/{id}.ogg`; changing or
+deleting a word's clip in the admin page deletes that copy, so it is never
+stale. Without `format`, the response is the clip as uploaded, unchanged.
+
 ## Admin page
 
 `/admin/` — one password (`ADMIN_PASSWORD`), no user table. The session is a

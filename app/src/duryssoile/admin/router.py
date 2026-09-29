@@ -212,6 +212,7 @@ async def store_audio(word: Word, upload: UploadFile) -> None:
             await storage.delete_object(word.audio_key)
         except Exception:  # noqa: BLE001 - a stale object is not fatal
             pass
+    await storage.forget_opus(word.id)
 
     word.audio_key = key
 
@@ -308,6 +309,7 @@ async def update_word(
             await storage.delete_object(row.audio_key)
         except Exception:  # noqa: BLE001
             pass
+        await storage.forget_opus(row.id)
         row.audio_key = None
 
     if audio is not None and audio.filename:
@@ -342,6 +344,7 @@ async def delete_word(
             await storage.delete_object(row.audio_key)
         except Exception:  # noqa: BLE001
             pass
+        await storage.forget_opus(row.id)
 
     await session.delete(row)
     await session.commit()

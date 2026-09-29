@@ -29,6 +29,22 @@ def audio_key(word_type: str, word_id: int, suffix: str) -> str:
     return f'{word_type}/{word_id}{suffix.lower()}'
 
 
+def opus_key(word_id: int) -> str:
+    """The object key of a word's clip re-encoded as OGG/Opus (see voice.py).
+
+    Created on first request and deleted whenever the word's clip changes,
+    so it is never stale.
+    """
+    return f'opus/{word_id}.ogg'
+
+
+async def forget_opus(word_id: int) -> None:
+    try:
+        await delete_object(opus_key(word_id))
+    except Exception:  # noqa: BLE001 - it is recreated on the next request
+        pass
+
+
 @lru_cache
 def get_client():
     settings = get_settings()
