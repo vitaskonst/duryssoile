@@ -1,0 +1,10 @@
+# The build context is app/; only what the image needs is sent to it.
+*
+!pyproject.toml
+!requirements.txt
+!alembic.ini
+!migrations/
+!src/
+**/__pycache__/
+**/*.pyc
+**/*.egg-info/

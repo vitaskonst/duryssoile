@@ -72,7 +72,7 @@ services:
       start_period: 15s
 
   backend:
-    build: .
+    build: ./app
     image: duryssoile-backend
     restart: unless-stopped
     environment:
@@ -122,9 +122,9 @@ services:
   # backend. On an existing deployment it finishes in a second or two.
   #   docker compose run --rm setup --reset   # wipe and reimport the seed
   setup:
-    build: .
+    build: ./app
     image: duryssoile-backend
-    entrypoint: ["python", "-m", "app.bootstrap"]
+    entrypoint: ["python", "-m", "duryssoile.bootstrap"]
     command: []
     restart: "no"
     environment:

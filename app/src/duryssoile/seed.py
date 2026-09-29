@@ -10,7 +10,7 @@ source of truth: words are edited through the admin page, and changes to the
 seed files are never re-applied. `reset=True` wipes the words and the bucket
 and imports again -- it discards every edit made since.
 
-Run through app.bootstrap, which applies the migrations first.
+Run through duryssoile.bootstrap, which applies the migrations first.
 """
 
 from __future__ import annotations

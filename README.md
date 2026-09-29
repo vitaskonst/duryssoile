@@ -26,14 +26,22 @@ working as-is.
 ## Layout
 
 ```
-app/            the FastAPI app: public API (/api/v1.0) + admin page (/admin)
-  bootstrap.py  pre-start step: apply migrations, import the seed if empty
-  seed.py       the one-time import: seed/ -> Postgres + RustFS
-migrations/     Alembic migrations -- the schema lives here
-seed/           the original data: two JSON files + audio/ (clips, git-ignored)
-caddy/          reverse proxy, and HTTPS with automatic certificates
-Dockerfile      one image, used by both the backend and setup services
+app/                    the application; the image's build context
+  Dockerfile            one image, used by both the backend and setup services
+  pyproject.toml        package metadata; pinned dependencies in requirements.txt
+  alembic.ini
+  migrations/           Alembic migrations -- the schema lives here
+  src/duryssoile/       the package: public API (/api/v1.0) + admin page (/admin)
+    bootstrap.py        pre-start step: apply migrations, import the seed if empty
+    seed.py             the one-time import: seed/ -> Postgres + RustFS
+seed/                   the original data: two JSON files + audio/ (git-ignored)
+caddy/                  reverse proxy, and HTTPS with automatic certificates
+docker-compose.yml      the stack; configured by .env (see .env.example)
 ```
+
+`app/` knows nothing about how it is deployed: the compose file, the Caddy
+config and `.env` live outside it, and the seed data is mounted in at run
+time.
 
 ## Running it
 
@@ -103,9 +111,10 @@ means requesting new certificates, and Let's Encrypt rate-limits those.
 
 ## Schema and migrations
 
-The schema is defined by the Alembic migrations in `migrations/versions/`.
+The schema is defined by the Alembic migrations in `app/migrations/versions/`.
 `setup` runs `alembic upgrade head` on every `up`, so deploying a new
-migration is just deploying the code. The models in `app/models.py` mirror
+migration is just deploying the code. The models in
+`app/src/duryssoile/models.py` mirror
 the schema, index and constraint names included.
 
 To change the schema, edit the models, rebuild, and generate a migration.
@@ -114,7 +123,7 @@ the generated file in your checkout rather than inside the container:
 
 ```bash
 docker compose build
-docker compose run --rm --user "$(id -u)" -v ./migrations:/srv/migrations \
+docker compose run --rm --user "$(id -u)" -v ./app/migrations:/srv/migrations \
     --entrypoint alembic setup revision --autogenerate --rev-id 0003 -m "describe it"
 ```
 
@@ -129,7 +138,7 @@ docker compose run --rm --entrypoint alembic setup check
 ```
 
 A database built before migrations existed (by the old `init` service) has
-the tables but no `alembic_version`. `app.bootstrap` recognises that and
+the tables but no `alembic_version`. `duryssoile.bootstrap` recognises that and
 stamps it at revision `0001`, which reproduces exactly that schema, before
 upgrading.
 
@@ -270,7 +279,7 @@ drops its correct versions. This keeps the API response shape identical to
 
 If you do want correct versions on both types, add
 `WordType.commonly_mispronounced` to `TYPES_WITH_CORRECT_VERSIONS` in
-`app/admin/labels.py` — that one set drives both the form and the
+`app/src/duryssoile/admin/labels.py` — that one set drives both the form and the
 server-side rule.
 
 ### The rest

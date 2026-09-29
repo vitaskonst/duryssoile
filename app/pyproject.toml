@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools==84.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "duryssoile"
+version = "2.0.0"
+description = "Дұрыс сөйле: Kazakh pronunciation reference API and admin page"
+requires-python = ">=3.12"
+# The pinned runtime dependencies live in requirements.txt, which the
+# Dockerfile installs in its own layer so they are cached across code changes.
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+duryssoile = ["templates/*.html"]

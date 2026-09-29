@@ -1,7 +1,7 @@
 """Initial schema.
 
 The schema the pre-Alembic `db/schema.sql` created, reproduced exactly so a
-database built by it can be adopted by stamping this revision (app.bootstrap
+database built by it can be adopted by stamping this revision (duryssoile.bootstrap
 does that automatically).
 
 Revision ID: 0001

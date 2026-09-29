@@ -33,11 +33,16 @@ class Settings(BaseSettings):
     # Page size cap for the public API, mirrors the original behaviour.
     max_page_size: int = 100
 
-    # The one-time import (app.seed): the two JSON files live in seed_dir and
+    # The one-time import (duryssoile.seed): the two JSON files live in seed_dir and
     # the clips in audio_dir, which defaults to seed_dir/audio.
     seed_dir: Path = Path('seed')
     audio_dir: Path | None = None
     upload_concurrency: int = 16
+
+    # Relative to the working directory, /srv in the image. It cannot be
+    # found from this package's location, which is site-packages once the
+    # package is installed.
+    alembic_ini: Path = Path('alembic.ini')
 
     @property
     def seed_audio_dir(self) -> Path:

@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 .venv/
+*.egg-info/
+build/
 
 # The pronunciation clips (~611 MB) stay out of git. The README in that
 # directory is kept so the directory -- and its expected layout -- exists in

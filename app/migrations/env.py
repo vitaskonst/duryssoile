@@ -5,8 +5,8 @@ from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
-from app.config import get_settings
-from app.models import Base
+from duryssoile.config import get_settings
+from duryssoile.models import Base
 
 config = context.config
 

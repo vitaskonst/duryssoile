@@ -1,23 +1,22 @@
 """Prepare the database and the bucket for the backend.
 
   1. Apply the migrations (alembic upgrade head).
-  2. Import the seed data if the database has no words yet (app.seed).
+  2. Import the seed data if the database has no words yet (duryssoile.seed).
 
 Compose runs this as the `setup` service on every `up`, and the backend only
 starts once it has exited successfully. On an existing deployment both steps
 are no-ops unless a new migration has been added.
 
 Usage:
-    python -m app.bootstrap                 # migrate, seed if empty
-    python -m app.bootstrap --skip-audio    # seed without uploading clips
-    python -m app.bootstrap --reset         # wipe words + bucket, reimport
+    python -m duryssoile.bootstrap                 # migrate, seed if empty
+    python -m duryssoile.bootstrap --skip-audio    # seed without uploading clips
+    python -m duryssoile.bootstrap --reset         # wipe words + bucket, reimport
 """
 
 import argparse
 import asyncio
 import logging
 import sys
-from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
@@ -29,8 +28,6 @@ from . import seed
 from .config import get_settings
 
 log = logging.getLogger('bootstrap')
-
-ALEMBIC_INI = Path(__file__).resolve().parent.parent / 'alembic.ini'
 
 # The revision matching the schema the pre-Alembic seeder created.
 BASELINE_REVISION = '0001'
@@ -48,7 +45,7 @@ async def table_names() -> set[str]:
 
 
 def migrate() -> None:
-    config = Config(str(ALEMBIC_INI))
+    config = Config(str(get_settings().alembic_ini))
     tables = asyncio.run(table_names())
 
     # A database built before migrations existed has the tables but no record
