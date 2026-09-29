@@ -161,9 +161,9 @@ the source of truth: words are edited through the admin page, and changing
 the seed files has no effect on a running deployment. Back up the database
 and the bucket, not `seed/`.
 
-The clips default to `seed/audio`; set `AUDIO_DIR` to read them from another
-host directory. They are only read during the import, so a deployment that
-has been seeded no longer needs them.
+The import reads `./seed`; set `SEED_DIR` to use another host directory with
+the same `data/` + `audio/` layout. It is only read during the import, so a
+deployment that has been seeded no longer needs it.
 
 ```bash
 docker compose up -d                          # imports if the database is empty
@@ -173,7 +173,7 @@ docker compose run --rm setup --reset         # wipe everything and reimport
 
 `--reset` deletes every word and every object in the bucket before importing,
 so it discards all edits made through the admin page. The clips are matched
-before anything is deleted, so a wrong `AUDIO_DIR` fails the run with the
+before anything is deleted, so a wrong `SEED_DIR` fails the run with the
 existing data intact.
 
 The import writes nothing to the database until every upload has succeeded,

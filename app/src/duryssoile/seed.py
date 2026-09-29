@@ -152,7 +152,7 @@ def resolve_audio(
     if not directory.is_dir():
         raise SeedError(
             f'audio directory not found: {directory} -- put the clips in '
-            f'seed/audio/<type>/ or point AUDIO_DIR at them'
+            f'seed/audio/<type>/ (or point SEED_DIR at a seed directory)'
         )
 
     by_pair, by_name = index_audio(directory)

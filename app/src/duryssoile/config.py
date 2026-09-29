@@ -33,11 +33,9 @@ class Settings(BaseSettings):
     # Page size cap for the public API, mirrors the original behaviour.
     max_page_size: int = 100
 
-    # The one-time import (duryssoile.seed): the two JSON files live in
-    # seed_dir/data and the clips in audio_dir, which defaults to
-    # seed_dir/audio.
+    # The one-time import (duryssoile.seed) reads seed_dir, laid out as
+    # data/ (the two JSON files) and audio/ (the clips).
     seed_dir: Path = Path('seed')
-    audio_dir: Path | None = None
     upload_concurrency: int = 16
 
     # Relative to the working directory, /srv in the image. It cannot be
@@ -51,7 +49,7 @@ class Settings(BaseSettings):
 
     @property
     def seed_audio_dir(self) -> Path:
-        return self.audio_dir or self.seed_dir / 'audio'
+        return self.seed_dir / 'audio'
 
     @property
     def database_url(self) -> str:

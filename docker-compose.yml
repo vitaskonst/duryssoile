@@ -131,10 +131,9 @@ services:
       <<: *app-env
       UPLOAD_CONCURRENCY: ${UPLOAD_CONCURRENCY:-16}
     volumes:
-      - ./seed/:/srv/seed/:ro
-      # The clips, laid out as <type>/<filename>. They default to
-      # ./seed/audio; AUDIO_DIR points elsewhere on the host instead.
-      - ${AUDIO_DIR:-./seed/audio}/:/srv/seed/audio/:ro
+      # The seed directory, laid out as data/*.json and audio/<type>/. It
+      # defaults to ./seed; SEED_DIR points at another one on the host.
+      - ${SEED_DIR:-./seed}/:/srv/seed/:ro
     depends_on:
       db:
         condition: service_healthy
