@@ -14,6 +14,16 @@
 }
 
 (backend) {
+	# The admin page is for the internal network only. The perimeter NATs
+	# only the destination, so a client's own address tells internal
+	# (10.x) from external (public) callers. Outsiders get a 404, so the
+	# page does not reveal that it exists.
+	@admin_from_outside {
+		path /admin /admin/*
+		not remote_ip private_ranges
+	}
+	respond @admin_from_outside 404
+
 	# Admin audio uploads are capped at 10 MB by the app.
 	request_body {
 		max_size 12MB
