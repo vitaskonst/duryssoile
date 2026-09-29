@@ -53,8 +53,8 @@ app.add_exception_handler(
 
 # The public API lives in its own sub-application so it keeps the original
 # URL space (/api/v1.0/words, /api/v1.0/audio/{id}) and gets its own
-# OpenAPI docs at /api/v1.0/docs. The Telegram bot in ./telegram-bot talks
-# to exactly these paths, unchanged from the 2023 version.
+# OpenAPI docs at /api/v1.0/docs. Existing clients talk to exactly these
+# paths, unchanged from the 2023 version.
 api_v1 = FastAPI(title='Дұрыс сөйле API', version='1.0')
 api_v1.include_router(words_router, prefix='/words', tags=['Words'])
 api_v1.include_router(audio_router, prefix='/audio', tags=['Audio'])

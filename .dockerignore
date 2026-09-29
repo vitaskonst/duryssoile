@@ -1,0 +1,9 @@
+# The build context is the repository root; only requirements.txt,
+# alembic.ini, migrations/ and app/ go into the image.
+*
+!requirements.txt
+!alembic.ini
+!migrations/
+!app/
+**/__pycache__/
+**/*.pyc

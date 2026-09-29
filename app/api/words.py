@@ -17,7 +17,7 @@ def serialize(word: Word) -> dict[str, Any]:
 
     The v1 service returned the raw word dict minus 'filename', which meant
     commonly-mispronounced words carried NO 'correctVersions' key at all
-    (their JSON never had one). The Telegram bot relies on this, so we omit
+    (their JSON never had one). Existing clients rely on this, so we omit
     the key when there are no correct versions rather than sending [].
     """
     payload: dict[str, Any] = {'id': word.id, 'word': word.word}
@@ -70,8 +70,9 @@ async def read_words(
     statement = select(Word).where(Word.type == WordType(type.value))
 
     if filter:
-        # lower() matches the functional index in db/schema.sql; escape the
-        # LIKE metacharacters so a filter of '100%' cannot match everything.
+        # lower() matches the functional index word_type_lower_word_idx;
+        # escape the LIKE metacharacters so a filter of '100%' cannot match
+        # everything.
         escaped = filter.lower().replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
         statement = statement.where(Word.word.ilike(f'{escaped}%', escape='\\'))
 
@@ -80,7 +81,7 @@ async def read_words(
     )
 
     # NOTE: the original computed result_ids[offset*limit:(offset+1)*limit],
-    # i.e. `offset` is a page index. The Telegram bot increments it by 1 per
+    # i.e. `offset` is a page index. Existing clients increment it by 1 per
     # page, so this semantic is load-bearing -- do not "fix" it to a row offset.
     statement = statement.offset(offset * limit).limit(limit)
 

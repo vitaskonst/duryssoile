@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 .venv/
 
-# The pronunciation clips (~611 MB). Keep them out of git; point AUDIO_DIR at
-# wherever they live and let the init service upload them into RustFS.
-audio/
+# The pronunciation clips (~611 MB) stay out of git. The README in that
+# directory is kept so the directory -- and its expected layout -- exists in
+# every checkout.
+seed/audio/*
+!seed/audio/README.md

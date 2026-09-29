@@ -6,12 +6,18 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Sequence,
-    String,
+    Text,
     func,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+# The schema itself is defined by the migrations in migrations/. The models
+# mirror it, indexes and constraint names included, so that `alembic check`
+# reports any drift between the two.
 
 
 class Base(DeclarativeBase):
@@ -31,7 +37,6 @@ class Word(Base):
     id: Mapped[int] = mapped_column(
         Integer, Sequence('word_id_seq'), primary_key=True, autoincrement=False
     )
-    # native_enum values must match the word_type enum in db/schema.sql.
     type: Mapped[WordType] = mapped_column(
         Enum(
             WordType,
@@ -39,10 +44,9 @@ class Word(Base):
             values_callable=lambda e: [m.value for m in e],
         ),
         nullable=False,
-        index=True,
     )
-    word: Mapped[str] = mapped_column(String, nullable=False)
-    audio_key: Mapped[str | None] = mapped_column(String, nullable=True)
+    word: Mapped[str] = mapped_column(Text, nullable=False)
+    audio_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -57,7 +61,12 @@ class Word(Base):
         lazy='selectin',
     )
 
-    __table_args__ = (CheckConstraint("word <> ''", name='word_not_empty'),)
+    __table_args__ = (
+        CheckConstraint("word <> ''", name='word_word_check'),
+        Index('word_type_id_idx', 'type', 'id'),
+        # Supports the API's case-insensitive prefix filter.
+        Index('word_type_lower_word_idx', 'type', text('lower(word) text_pattern_ops')),
+    )
 
 
 class CorrectVersion(Base):
@@ -65,11 +74,16 @@ class CorrectVersion(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     word_id: Mapped[int] = mapped_column(
-        ForeignKey('word.id', ondelete='CASCADE'), nullable=False, index=True
+        ForeignKey('word.id', ondelete='CASCADE'), nullable=False
     )
-    word: Mapped[str] = mapped_column(String, nullable=False)
-    incorrect_usage: Mapped[str | None] = mapped_column(String, nullable=True)
-    correct_usage: Mapped[str | None] = mapped_column(String, nullable=True)
+    word: Mapped[str] = mapped_column(Text, nullable=False)
+    incorrect_usage: Mapped[str | None] = mapped_column(Text, nullable=True)
+    correct_usage: Mapped[str | None] = mapped_column(Text, nullable=True)
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     parent: Mapped[Word] = relationship(back_populates='correct_versions')
+
+    __table_args__ = (
+        CheckConstraint("word <> ''", name='correct_version_word_check'),
+        Index('correct_version_word_id_position_idx', 'word_id', 'position'),
+    )

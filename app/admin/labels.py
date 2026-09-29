@@ -4,8 +4,8 @@ The admin interface is Kazakh-only -- there is no language switch and no
 fallback locale. Strings that appear once live at their use site; the ones
 below are shared between the router and the templates.
 
-The two type labels are copied verbatim from `telegram-bot/bot.py`, so the
-admin page and the bot name the same thing the same way.
+The two type labels match the ones the public clients show, so the admin page
+and the clients name the same thing the same way.
 """
 
 from ..models import WordType

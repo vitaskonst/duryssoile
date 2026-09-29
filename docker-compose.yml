@@ -13,6 +13,11 @@ x-rustfs-env: &rustfs-env
   RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:?set RUSTFS_SECRET_KEY in .env}
   RUSTFS_BUCKET: ${RUSTFS_BUCKET:-audio}
 
+x-app-env: &app-env
+  <<: [*db-env, *rustfs-env]
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+  SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+
 services:
   db:
     image: postgres:16-alpine
@@ -30,8 +35,7 @@ services:
       retries: 10
 
   # S3-compatible object storage for the pronunciation clips. Replaces the
-  # read-only host bind mount the 2023 version used, and the MinIO block that
-  # sat commented out in refactor_v1/docker-compose-future.yml.
+  # read-only host bind mount the 2023 version used.
   rustfs:
     image: rustfs/rustfs:latest
     restart: unless-stopped
@@ -60,21 +64,19 @@ services:
       start_period: 15s
 
   backend:
-    build: ./backend
+    build: .
+    image: duryssoile-backend
     restart: unless-stopped
-    environment:
-      <<: [*db-env, *rustfs-env]
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
-      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+    environment: *app-env
     depends_on:
       db:
         condition: service_healthy
       rustfs:
         condition: service_healthy
-      # The backend does not start until init has converged the database and
-      # the audio bucket, so it never serves an empty or half-seeded dataset.
-      # A non-zero exit from init blocks startup on purpose.
-      init:
+      # The backend does not start until setup has migrated the database and,
+      # on a fresh deployment, imported the seed data -- so it never serves an
+      # outdated schema or an empty dataset. A failed setup blocks startup.
+      setup:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)\""]
@@ -94,23 +96,24 @@ services:
       backend:
         condition: service_started
 
-  # Convergence step, run on every `up` before the backend starts. In the
-  # default sync mode it exits immediately when the database and the bucket
-  # already match data/*.json and ./audio; set INIT_MODE=hard (or pass
-  # --hard) to drop everything and rebuild.
-  init:
-    build: ./init
+  # Runs on every `up` before the backend starts: applies the migrations,
+  # then imports ./seed if the database has no words yet. Same image as the
+  # backend. On an existing deployment it finishes in a second or two.
+  #   docker compose run --rm setup --reset   # wipe and reimport the seed
+  setup:
+    build: .
+    image: duryssoile-backend
+    entrypoint: ["python", "-m", "app.bootstrap"]
+    command: []
     restart: "no"
     environment:
-      <<: [*db-env, *rustfs-env]
-      INIT_MODE: ${INIT_MODE:-sync}
+      <<: *app-env
       UPLOAD_CONCURRENCY: ${UPLOAD_CONCURRENCY:-16}
     volumes:
-      - ./db/:/srv/db/:ro
-      - ./data/:/srv/data/:ro
-      # The pronunciation clips, laid out as ./audio/<type>/<filename>.
-      # Read-only: init uploads them into RustFS and never writes here.
-      - ${AUDIO_DIR:-./audio}/:/srv/audio/:ro
+      - ./seed/:/srv/seed/:ro
+      # The clips, laid out as <type>/<filename>. They default to
+      # ./seed/audio; AUDIO_DIR points elsewhere on the host instead.
+      - ${AUDIO_DIR:-./seed/audio}/:/srv/seed/audio/:ro
     depends_on:
       db:
         condition: service_healthy

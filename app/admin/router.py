@@ -203,7 +203,7 @@ async def store_audio(word: Word, upload: UploadFile) -> None:
     if not body:
         raise HTTPException(status_code=400, detail='Дыбыс файлы бос')
 
-    key = f'{word.type.value}/{word.id}{suffix}'
+    key = storage.audio_key(word.type.value, word.id, suffix)
     await storage.put_object(key, io.BytesIO(body), content_type)
 
     # Drop the previous object if the key changed (e.g. mp3 -> wav).

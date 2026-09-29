@@ -19,6 +19,16 @@ class AudioNotFound(Exception):
     pass
 
 
+def audio_key(word_type: str, word_id: int, suffix: str) -> str:
+    """The object key for a word's clip, e.g. 'parasite/42.mp3'.
+
+    Derived from the id rather than the original filename: S3 request signing
+    and Cyrillic keys are a bad combination, and several words share a
+    filename.
+    """
+    return f'{word_type}/{word_id}{suffix.lower()}'
+
+
 @lru_cache
 def get_client():
     settings = get_settings()
@@ -98,3 +108,38 @@ def _delete_object_sync(key: str) -> None:
 
 async def delete_object(key: str) -> None:
     await run_in_threadpool(_delete_object_sync, key)
+
+
+# Bulk operations for the seeder. Synchronous: it runs them on its own
+# thread pool, outside any request.
+
+def upload_file(path: str, key: str, content_type: str) -> None:
+    settings = get_settings()
+    get_client().upload_file(
+        path, settings.rustfs_bucket, key, ExtraArgs={'ContentType': content_type}
+    )
+
+
+def empty_bucket() -> int:
+    """Delete every object in the bucket. Returns how many there were."""
+    settings = get_settings()
+    client = get_client()
+    # The bucket is created by the backend on startup, which may not have run
+    # yet on a fresh deployment.
+    ensure_bucket()
+    keys = [
+        item['Key']
+        for page in client.get_paginator('list_objects_v2').paginate(
+            Bucket=settings.rustfs_bucket
+        )
+        for item in page.get('Contents', [])
+    ]
+    for start in range(0, len(keys), 1000):
+        client.delete_objects(
+            Bucket=settings.rustfs_bucket,
+            Delete={
+                'Objects': [{'Key': key} for key in keys[start:start + 1000]],
+                'Quiet': True,
+            },
+        )
+    return len(keys)
