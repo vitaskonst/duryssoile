@@ -18,9 +18,15 @@ x-app-env: &app-env
   ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
   SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
 
+# Every image is pinned by tag and digest, so a fresh pull gives exactly the
+# images the stack was tested with even if a tag is later re-pushed. To
+# upgrade one, pick a release tag on Docker Hub, read its notes, and update
+# both parts.
 services:
   db:
-    image: postgres:16-alpine
+    # A new major version cannot read this data directory: upgrading past 16
+    # takes a dump and restore, not just a new tag.
+    image: postgres:16.15-alpine3.24@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-duryssoile}
@@ -37,9 +43,8 @@ services:
   # S3-compatible object storage for the pronunciation clips. Replaces the
   # read-only host bind mount the 2023 version used.
   rustfs:
-    # Pinned by digest as well as tag: the stack's data lives in this image's
-    # on-disk format, so upgrades should be deliberate. To upgrade, pick a
-    # release tag on Docker Hub, read its notes, and update both parts.
+    # The bucket lives in this version's on-disk format; check the release
+    # notes for format changes before upgrading.
     image: rustfs/rustfs:1.0.0@sha256:8cc9801755448b71a786705ce76692c77e14936cccd87cf2fc31842e58f4d1ff
     restart: unless-stopped
     environment:
@@ -89,7 +94,7 @@ services:
       start_period: 10s
 
   nginx:
-    image: nginx:mainline-alpine
+    image: nginx:1.31.6-alpine3.24@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
     restart: unless-stopped
     volumes:
       - ./nginx/:/etc/nginx/conf.d/:ro
