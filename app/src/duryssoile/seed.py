@@ -1,8 +1,8 @@
 """One-time import of the seed data into an empty deployment.
 
-  seed/parasite.json                ->  Postgres
-  seed/commonly-mispronounced.json  ->  Postgres
-  seed/audio/<type>/<filename>      ->  RustFS
+  seed/data/parasite.json                ->  Postgres
+  seed/data/commonly-mispronounced.json  ->  Postgres
+  seed/audio/<type>/<filename>           ->  RustFS
 
 The import runs only when the `word` table is empty, so it populates a fresh
 deployment and is a no-op everywhere else. Once imported, the database is the
@@ -62,7 +62,7 @@ class SeedWord:
     correct_versions: list[dict] = field(default_factory=list)
 
 
-def load_words(seed_dir: Path) -> list[SeedWord]:
+def load_words(data_dir: Path) -> list[SeedWord]:
     """Read both JSON files.
 
     They share one id space (parasite 0-185, commonly-mispronounced
@@ -72,7 +72,7 @@ def load_words(seed_dir: Path) -> list[SeedWord]:
     seen: dict[int, str] = {}
 
     for word_type, filename in SOURCES.items():
-        path = seed_dir / filename
+        path = data_dir / filename
         if not path.is_file():
             raise SeedError(f'missing seed file: {path}')
 
@@ -249,7 +249,7 @@ async def insert_words(
 
 async def seed(*, skip_audio: bool = False, reset: bool = False) -> None:
     settings = get_settings()
-    words = load_words(settings.seed_dir)
+    words = load_words(settings.seed_data_dir)
 
     engine = create_async_engine(settings.database_url, poolclass=NullPool)
     try:

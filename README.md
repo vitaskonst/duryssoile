@@ -148,9 +148,10 @@ upgrading.
 
 ```
 seed/
-├── parasite.json                  186 words
-├── commonly-mispronounced.json    22 008 words
-└── audio/                         git-ignored, ~611 MB
+├── data/
+│   ├── parasite.json                  186 words
+│   └── commonly-mispronounced.json    22 008 words
+└── audio/                             git-ignored, ~611 MB
     ├── parasite/
     └── commonly-mispronounced/
 ```
@@ -188,7 +189,7 @@ filename alone, after folding both sides through the same normalisation:
   characters like ә and ұ; without this most files miss
 - **case**
 - **invisible formatting characters** — one clip on disk carries a real soft
-  hyphen (U+00AD) in its name while `seed/*.json` stores the literal six
+  hyphen (U+00AD) in its name while `seed/data/*.json` stores the literal six
   characters `\xad` for it, a double-escaping bug in the original export.
   The import decodes such escapes and then drops all Unicode `Cf`
   characters, which makes the two sides agree.

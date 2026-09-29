@@ -10,4 +10,4 @@ seed/audio/
 ```
 
 Each file is named after the `filename` field of its word in
-`seed/parasite.json` or `seed/commonly-mispronounced.json`.
+`seed/data/parasite.json` or `seed/data/commonly-mispronounced.json`.
