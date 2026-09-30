@@ -1,12 +1,14 @@
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import Settings, get_settings
 from ..db import get_session
 from ..models import Word, WordType
+from .conditional import etag_of, is_fresh, not_modified
 from .schemas import SortingOrder, WordTypeQuery
 
 router = APIRouter()
@@ -92,11 +94,21 @@ async def read_words(
 @router.get('/{word_id}')
 async def read_word(
     word_id: int,
+    request: Request,
     session: Annotated[AsyncSession, Depends(get_session)],
-) -> dict[str, Any]:
+) -> Response:
+    """One word. Carries an ETag and answers If-None-Match with 304, so a
+    client holding a copy can check cheaply whether it changed."""
     word = await session.get(Word, word_id)
 
     if word is None:
         raise HTTPException(status_code=404, detail='Not Found')
 
-    return serialize(word)
+    # The same JSONResponse FastAPI builds from a returned dict, so the body is
+    # unchanged; built here to hash exactly the bytes that are sent.
+    response = JSONResponse(serialize(word))
+    etag = etag_of(response.body)
+    if is_fresh(request, etag):
+        return not_modified(etag)
+    response.headers['ETag'] = etag
+    return response

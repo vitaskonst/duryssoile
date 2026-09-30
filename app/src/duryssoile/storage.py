@@ -81,25 +81,43 @@ def ensure_bucket() -> None:
                 raise
 
 
-def _get_object_sync(key: str) -> tuple[bytes, str, int]:
+def _raise_not_found(exc: ClientError, key: str) -> None:
+    code = exc.response.get('Error', {}).get('Code')
+    if code in ('NoSuchKey', 'NoSuchBucket', '404', 'NotFound'):
+        raise AudioNotFound(key) from exc
+    raise exc
+
+
+def _get_object_sync(key: str) -> tuple[bytes, str, int, str]:
     settings = get_settings()
     try:
         response = get_client().get_object(
             Bucket=settings.rustfs_bucket, Key=key
         )
     except ClientError as exc:
-        code = exc.response.get('Error', {}).get('Code')
-        if code in ('NoSuchKey', 'NoSuchBucket', '404'):
-            raise AudioNotFound(key) from exc
-        raise
+        _raise_not_found(exc, key)
 
     body = response['Body'].read()
     content_type = response.get('ContentType') or 'audio/mpeg'
-    return body, content_type, len(body)
+    return body, content_type, len(body), response['ETag']
 
 
-async def get_object(key: str) -> tuple[bytes, str, int]:
-    """Return (body, content_type, size) for an object, or raise AudioNotFound."""
+def _object_etag_sync(key: str) -> str:
+    settings = get_settings()
+    try:
+        response = get_client().head_object(Bucket=settings.rustfs_bucket, Key=key)
+    except ClientError as exc:
+        _raise_not_found(exc, key)
+    return response['ETag']
+
+
+async def object_etag(key: str) -> str:
+    """The stored object's ETag (a content hash), without downloading it."""
+    return await run_in_threadpool(_object_etag_sync, key)
+
+
+async def get_object(key: str) -> tuple[bytes, str, int, str]:
+    """Return (body, content_type, size, etag), or raise AudioNotFound."""
     return await run_in_threadpool(_get_object_sync, key)
 
 
