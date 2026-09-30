@@ -246,6 +246,12 @@ conversion uses mpg123 and opusenc, which is why clips must be MP3, WAV or
 Opus in OGG. Without `format`, the response is the clip as uploaded,
 unchanged.
 
+`GET /words/{id}` and `GET /audio/{id}` (with or without `format`) carry an
+`ETag` and honour `If-None-Match`: when the client's copy is current they
+answer `304 Not Modified` with no body. The mobile app uses this to keep its
+offline favourites up to date; a deleted word answers 404. Response bodies
+are unchanged.
+
 ## Admin page
 
 `/admin/` — one password (`ADMIN_PASSWORD`), no user table. The session is a
